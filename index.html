@@ -1,25 +1,539 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Drop Game</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Drop | charity: water</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue: #2E9DF7;
+    --blue-dark: #19335D;
+    --yellow: #FFC907;
+    --dirty: #8B5E34;
+    --danger: #F5402C;
+    --bg-top: #EAF6FF;
+    --bg-bottom: #FFFFFF;
+    --white: #ffffff;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 60%);
+    color: var(--blue-dark);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .app{
+    width: 100%;
+    max-width: 480px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 14px;
+  }
+
+  h1{
+    font-family:'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 6vw, 36px);
+    margin: 0;
+    color: var(--blue-dark);
+  }
+  h1 span{ color: var(--blue); }
+
+  .tagline{
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #4a5a72;
+  }
+
+  .hud{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 16px 0 10px;
+  }
+
+  .stat{
+    background: var(--white);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 10px rgba(25,51,93,0.08);
+    text-align:center;
+    flex: 1;
+  }
+
+  .stat .label{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7488a3;
+    font-weight: 700;
+  }
+
+  .stat .value{
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--blue-dark);
+    transition: transform 0.15s ease, color 0.15s ease;
+  }
+
+  .stat .value.bump{
+    transform: scale(1.25);
+    color: var(--blue);
+  }
+  .stat .value.penalty{
+    transform: scale(1.25);
+    color: var(--danger);
+  }
+
+  .can-meter{
+    background: var(--white);
+    border-radius: 14px;
+    padding: 8px 14px;
+    box-shadow: 0 2px 10px rgba(25,51,93,0.08);
+    flex: 1.4;
+  }
+  .can-meter .label{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7488a3;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .can-track{
+    background: #EFF3F8;
+    border-radius: 999px;
+    height: 14px;
+    overflow: hidden;
+    border: 2px solid #DCE6F2;
+  }
+  .can-fill{
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--yellow), #ffdb5c);
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
+
+  .game-area{
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    max-height: 480px;
+    min-height: 340px;
+    background: linear-gradient(180deg, #DCEFFE 0%, #F5FBFF 100%);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 3px #d3e9fb;
+  }
+
+  .message-banner{
+    position:absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--blue-dark);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 5;
+    white-space: nowrap;
+  }
+  .message-banner.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(4px);
+  }
+
+  .drop{
+    position:absolute;
+    top: -40px;
+    width: 30px;
+    height: 38px;
+    cursor: pointer;
+    transition: transform 3s linear, top 3s linear;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.12));
+  }
+  .drop svg{ width:100%; height:100%; display:block; }
+
+  .drop.pop{
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    transform: scale(1.6);
+    opacity: 0;
+  }
+
+  .overlay{
+    position:absolute;
+    inset: 0;
+    background: rgba(25,51,93,0.85);
+    color: var(--white);
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 24px;
+    z-index: 10;
+  }
+  .overlay h2{
+    font-family:'Baloo 2', sans-serif;
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+  .overlay p{
+    margin: 0 0 18px;
+    max-width: 300px;
+    line-height: 1.4;
+    color: #DCEAFB;
+  }
+  .hidden{ display:none !important; }
+
+  button{
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 30px;
+    cursor: pointer;
+    background: var(--yellow);
+    color: var(--blue-dark);
+    box-shadow: 0 4px 0 #d9a900;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  button:active{
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #d9a900;
+  }
+  button.secondary{
+    background: transparent;
+    color: var(--white);
+    box-shadow: none;
+    border: 2px solid rgba(255,255,255,0.5);
+    margin-top: 10px;
+    padding: 8px 22px;
+    font-size: 14px;
+  }
+
+  .controls{
+    display:flex;
+    justify-content:center;
+    margin-top: 16px;
+  }
+
+  canvas.confetti{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index: 50;
+  }
+
+  @media (max-width: 380px){
+    .hud{ flex-direction: column; }
+    .stat, .can-meter{ width:100%; }
+  }
+</style>
 </head>
 <body>
-    <div class="game-wrapper">
-        <h1 class="game-title">Water Drop</h1>
-        <p class="game-tagline">Catch the good drops, avoid the bad ones!</p>
-        <div class="score-panel">
-            <div class="score">Score: <span id="score">0</span></div>
-            <div class="timer">Time: <span id="time">30</span>s</div>
-            <button id="start-btn">Start Game</button>
-        </div>
-        
-        <div id="game-container">
-        </div>
+
+<div class="app">
+  <header>
+    <h1>Water <span>Drop</span></h1>
+    <p class="tagline">Catch clean water. Dodge the dirty stuff.</p>
+  </header>
+
+  <div class="hud">
+    <div class="stat">
+      <div class="label">Score</div>
+      <div class="value" id="score">0</div>
     </div>
-    
-    <script src="script.js"></script>
+    <div class="stat">
+      <div class="label">Time</div>
+      <div class="value" id="time">30</div>
+    </div>
+    <div class="can-meter">
+      <div class="label">Jerry Can</div>
+      <div class="can-track"><div class="can-fill" id="canFill"></div></div>
+    </div>
+  </div>
+
+  <div class="game-area" id="gameArea">
+    <div class="message-banner" id="banner"></div>
+
+    <div class="overlay" id="startScreen">
+      <h2>Ready to fill the can?</h2>
+      <p>Tap clean water drops to score points. Avoid the muddy ones — they cost you. You've got 30 seconds.</p>
+      <button id="startBtn">Start Game</button>
+    </div>
+
+    <div class="overlay hidden" id="endScreen">
+      <h2 id="endTitle">Time's up!</h2>
+      <p id="endMessage">You collected <span id="finalScore">0</span> clean drops.</p>
+      <button id="playAgainBtn">Play Again</button>
+      <button class="secondary" id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="secondary" id="quitBtn" style="color:#19335D;border-color:#19335D;">Reset Game</button>
+  </div>
+</div>
+
+<canvas class="confetti hidden" id="confettiCanvas"></canvas>
+
+<script>
+// ---------- CONFIG ----------
+const GAME_DURATION = 30;      // seconds
+const WIN_SCORE = 15;          // score needed to "win" and trigger confetti
+const SPAWN_INTERVAL = 750;    // ms between new drops
+const DIRTY_CHANCE = 0.32;     // 32% of drops are dirty
+const MAX_METER_SCORE = 20;    // score that fills the jerry can meter to 100%
+
+// ---------- STATE ----------
+let score = 0;
+let timeLeft = GAME_DURATION;
+let running = false;
+let spawnTimerId = null;
+let countdownTimerId = null;
+
+// ---------- DOM REFERENCES ----------
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const canFillEl = document.getElementById('canFill');
+const gameArea = document.getElementById('gameArea');
+const bannerEl = document.getElementById('banner');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const endTitle = document.getElementById('endTitle');
+const finalScoreEl = document.getElementById('finalScore');
+const endMessageEl = document.getElementById('endMessage');
+
+// ---------- SVG SHAPES ----------
+const CLEAN_SVG = `<svg viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+  <path d="M15 0 C15 0 2 18 2 26 A13 13 0 0 0 28 26 C28 18 15 0 15 0Z" fill="#2E9DF7"/>
+  <ellipse cx="10" cy="24" rx="3" ry="5" fill="#ffffff" opacity="0.4"/>
+</svg>`;
+
+const DIRTY_SVG = `<svg viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+  <path d="M15 0 C15 0 2 18 2 26 A13 13 0 0 0 28 26 C28 18 15 0 15 0Z" fill="#8B5E34"/>
+  <ellipse cx="10" cy="24" rx="3" ry="5" fill="#ffffff" opacity="0.25"/>
+</svg>`;
+
+// ---------- CORE GAME FUNCTIONS ----------
+
+function startGame(){
+  // reset state
+  score = 0;
+  timeLeft = GAME_DURATION;
+  running = true;
+  updateScoreDisplay(false);
+  updateMeter();
+  timeEl.textContent = timeLeft;
+
+  // clear any leftover drops
+  document.querySelectorAll('.drop').forEach(d => d.remove());
+
+  startScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+
+  spawnTimerId = setInterval(spawnDrop, SPAWN_INTERVAL);
+  countdownTimerId = setInterval(tickCountdown, 1000);
+}
+
+function tickCountdown(){
+  timeLeft -= 1;
+  timeEl.textContent = timeLeft;
+  if (timeLeft <= 0){
+    endGame();
+  }
+}
+
+function spawnDrop(){
+  if (!running) return;
+
+  const isDirty = Math.random() < DIRTY_CHANCE;
+  const drop = document.createElement('div');
+  drop.className = 'drop';
+  drop.dataset.type = isDirty ? 'dirty' : 'clean';
+  drop.innerHTML = isDirty ? DIRTY_SVG : CLEAN_SVG;
+
+  // random horizontal position within the game area
+  const areaWidth = gameArea.clientWidth;
+  const leftPos = Math.random() * (areaWidth - 30);
+  drop.style.left = leftPos + 'px';
+  drop.style.top = '-40px';
+
+  gameArea.appendChild(drop);
+
+  // trigger the CSS transition on the next frame so it actually animates
+  const fallDuration = 2.6 + Math.random() * 1.4; // 2.6s - 4s
+  requestAnimationFrame(() => {
+    drop.style.transitionDuration = fallDuration + 's';
+    drop.style.top = (gameArea.clientHeight - 10) + 'px';
+  });
+
+  // if the drop reaches the bottom without being clicked, remove it
+  const missTimeout = setTimeout(() => {
+    if (drop.isConnected) drop.remove();
+  }, fallDuration * 1000 + 50);
+
+  drop.addEventListener('click', () => {
+    clearTimeout(missTimeout);
+    collectDrop(drop);
+  });
+}
+
+function collectDrop(drop){
+  const isDirty = drop.dataset.type === 'dirty';
+
+  if (isDirty){
+    score = Math.max(0, score - 1);
+    updateScoreDisplay(true);
+    showBanner('Yuck! -1', true);
+  } else {
+    score += 1;
+    updateScoreDisplay(false);
+    checkMilestone(score);
+  }
+
+  updateMeter();
+
+  drop.classList.add('pop');
+  setTimeout(() => drop.remove(), 250);
+}
+
+function updateScoreDisplay(isPenalty){
+  scoreEl.textContent = score;
+  scoreEl.classList.remove('bump', 'penalty');
+  // force reflow so the animation can re-trigger on repeated clicks
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add(isPenalty ? 'penalty' : 'bump');
+}
+
+function updateMeter(){
+  const pct = Math.min(100, (score / MAX_METER_SCORE) * 100);
+  canFillEl.style.width = pct + '%';
+}
+
+function checkMilestone(currentScore){
+  if (currentScore === 5) showBanner('Nice! 5 clean drops 💧');
+  else if (currentScore === 10) showBanner('Halfway to full! 🚰');
+  else if (currentScore === WIN_SCORE) showBanner('Can is filling fast! 🎉');
+}
+
+let bannerTimeout = null;
+function showBanner(text, isWarning){
+  bannerEl.textContent = text;
+  bannerEl.style.background = isWarning ? '#F5402C' : '#19335D';
+  bannerEl.classList.add('show');
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => bannerEl.classList.remove('show'), 900);
+}
+
+function endGame(){
+  running = false;
+  clearInterval(spawnTimerId);
+  clearInterval(countdownTimerId);
+  document.querySelectorAll('.drop').forEach(d => d.remove());
+
+  finalScoreEl.textContent = score;
+  const won = score >= WIN_SCORE;
+
+  endTitle.textContent = won ? 'Can filled! You did it!' : "Time's up!";
+  endMessageEl.innerHTML = won
+    ? `You collected <span id="finalScore">${score}</span> clean drops — enough to fill the can!`
+    : `You collected <span id="finalScore">${score}</span> clean drops. Try again to fill the can!`;
+
+  endScreen.classList.remove('hidden');
+
+  if (won) launchConfetti();
+}
+
+function resetGame(){
+  running = false;
+  clearInterval(spawnTimerId);
+  clearInterval(countdownTimerId);
+  document.querySelectorAll('.drop').forEach(d => d.remove());
+  score = 0;
+  timeLeft = GAME_DURATION;
+  scoreEl.textContent = 0;
+  timeEl.textContent = GAME_DURATION;
+  updateMeter();
+  endScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+}
+
+// ---------- EVENT LISTENERS ----------
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('playAgainBtn').addEventListener('click', startGame);
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('quitBtn').addEventListener('click', resetGame);
+
+// ---------- CONFETTI (Celebrate Wins - LevelUp) ----------
+function launchConfetti(){
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.classList.remove('hidden');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+
+  const colors = ['#FFC907', '#2E9DF7', '#4FCB53', '#FF902A', '#F5402C'];
+  const pieces = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * canvas.height * 0.5,
+    size: 5 + Math.random() * 6,
+    speedY: 2 + Math.random() * 3,
+    speedX: (Math.random() - 0.5) * 2,
+    rotation: Math.random() * 360,
+    rotSpeed: (Math.random() - 0.5) * 10,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  }));
+
+  let frame = 0;
+  const maxFrames = 220;
+
+  function draw(){
+    frame++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      p.rotation += p.rotSpeed;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+      ctx.restore();
+    });
+
+    if (frame < maxFrames){
+      requestAnimationFrame(draw);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.classList.add('hidden');
+    }
+  }
+  draw();
+}
+</script>
 </body>
 </html>
